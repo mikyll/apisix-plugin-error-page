@@ -1,0 +1,29 @@
+upstreams:
+  # Upstream to internal service
+  - id: internal_httpbin
+    nodes:
+      "httpbin-standalone:80": 1
+    type: roundrobin
+
+routes:
+  # Simple route to internal service
+  - id: base_internal
+    uri: /get
+    upstream_id: internal_httpbin
+
+  # Route with demo plugin
+  - id: demo
+    uri: /demo
+    upstream_id: internal_httpbin
+    plugins:
+      demo:
+        body: "Hello from demo plugin!"
+
+  # Public API from demo plugin
+  - id: demo_public_api
+    uri: /apisix/plugin/demo/public_api
+    upstream_id: internal_httpbin
+    plugins:
+      public-api: {}
+      
+#END
