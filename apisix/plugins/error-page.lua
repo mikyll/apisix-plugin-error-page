@@ -14,15 +14,17 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 --
-local ngx           = ngx
-local apisix_plugin = require("apisix.plugin")
-local core          = require("apisix.core")
-local utils         = require("apisix.core.utils")
+local ngx                = ngx
+local apisix_plugin      = require("apisix.plugin")
+local core               = require("apisix.core")
+local utils              = require("apisix.core.utils")
 
-local plugin_name   = "error-page"
+local plugin_name        = "error-page"
 
+local DEFAULT_STATUS_MIN = 200
+local DEFAULT_STATUS_MAX = 599
 
-local schema = {
+local schema             = {
   type = "object",
   properties = {
     pages = {
@@ -52,31 +54,31 @@ local schema = {
             properties = {
               min = {
                 type = "integer",
-                default = 200,
+                default = DEFAULT_STATUS_MIN,
                 minimum = 200,
                 maximum = 598,
               },
               max = {
                 type = "integer",
-                default = 599,
+                default = DEFAULT_STATUS_MAX,
                 minimum = 201,
                 maximum = 599,
               },
               additionalProperties = false,
             },
           },
-          page_content = {
+          response_content = {
             description =
             "String representing the response APISIX must send. Can contain NGiNX variables (https://nginx.org/en/docs/http/ngx_http_core_module.html#variables)",
             type = "string",
           },
-          page_filepath = {
+          response_filepath = {
             description =
             "Path of a file containing the response APISIX must send. Can contain NGiNX variables (https://nginx.org/en/docs/http/ngx_http_core_module.html#variables)",
             type = "string",
           },
           response_headers = {
-            description = "extra headers for response",
+            description = "Headers to be included in APISIX response, for a specific plugin instance",
             {
               type = "object",
               minProperties = 1,
@@ -99,11 +101,11 @@ local schema = {
   },
 }
 
-local metadata_schema = {
+local metadata_schema    = {
   type = "object",
   properties = {
     response_headers = {
-      description = "default headers to be included in every response",
+      description = "Headers to be included in APISIX response, for all plugin instances",
       {
         type = "object",
         patternProperties = {
@@ -121,11 +123,13 @@ local metadata_schema = {
 
 
 local _M = {
-  version = 0.1,
+  version = 0.2,
   priority = 0,
   name = plugin_name,
   schema = schema,
   metadata_schema = metadata_schema,
+  author = "Michele Righi",
+  source = "https://github.com/mikyll/apisix-plugin-error-page",
 }
 
 
@@ -150,38 +154,39 @@ function _M.check_schema(conf, schema_type)
       return false, "Cannot set both status_codes and status_range, they are mutually exclusive"
     end
 
-    -- to fix (if one of min or max is not defined, here there's no default value yet)
-    -- if value.status_range then
-    --   if value.status_range.min >= value.status_range.max then
-    --     core.log.error("status_range.min must be lower than status_range.max")
-    --     return false, "status_range.min must be lower than status_range.max"
-    --   end
-    -- end
-
-    if not value.page_content and not value.page_filepath then
-      core.log.error("Must set one of page_content or page_filepath")
-      return false, "Must set one of page_content or page_filepath"
+    if value.status_range then
+      local min = value.status_range.min or DEFAULT_STATUS_MIN
+      local max = value.status_range.max or DEFAULT_STATUS_MAX
+      if min >= max then
+        core.log.error("status_range.min must be lower than status_range.max")
+        return false, "status_range.min must be lower than status_range.max"
+      end
     end
 
-    if value.page_content and value.page_filepath then
-      core.log.error("Cannot set both page_content and page_filepath, they are mutually exclusive")
-      return false, "Cannot set both page_content and page_filepath, they are mutually exclusive"
+    if not value.response_content and not value.response_filepath then
+      core.log.error("Must set one of response_content or response_filepath")
+      return false, "Must set one of response_content or response_filepath"
     end
 
-    if value.page_filepath then
-      local res, _ = pcall(read_all, value.page_filepath)
+    if value.response_content and value.response_filepath then
+      core.log.error("Cannot set both response_content and response_filepath, they are mutually exclusive")
+      return false, "Cannot set both response_content and response_filepath, they are mutually exclusive"
+    end
+
+    if value.response_filepath then
+      local res, _ = pcall(read_all, value.response_filepath)
       if not res then
-        core.log.error("File not found: " .. value.page_filepath)
-        return false, "File not found: " .. value.page_filepath
+        core.log.error("File not found: " .. value.response_filepath)
+        return false, "File not found: " .. value.response_filepath
       end
 
       -- Load the page from file
-      conf.pages[i].page_content = read_all(value.page_filepath)
-      conf.pages[i].page_filepath = nil
+      conf.pages[i].response_content = read_all(value.response_filepath)
+      conf.pages[i].response_filepath = nil
     end
   end
 
-  -- Order pages: status_codes > status_range
+  -- Order pages based on priority: status_codes > status_range
   table.sort(conf.pages, function(a, b)
     -- If 'a' has status_codes and 'b' has status_range, 'a' should come first
     if a.status_codes and b.status_range then
@@ -198,19 +203,20 @@ function _M.header_filter(conf, ctx)
   local error_page, error_headers
   local pages = conf.pages
 
-  -- Loop over pages to check if there's a status_code that matches
+  -- Loop over pages to check if there's a status code that matches
   for _, page in ipairs(pages) do
     if page.status_codes then
       for _, status in ipairs(page.status_codes) do
-        -- Status code matches
+        -- Status code matches specific
         if ngx.status == status then
-          error_page = page.page_content
+          error_page = page.response_content
         end
       end
     elseif page.status_range then
+      -- Status code matches range
       if ngx.status >= page.status_range.min and
           ngx.status <= page.status_range.max then
-        error_page = page.page_content
+        error_page = page.response_content
       end
     end
 
@@ -221,7 +227,7 @@ function _M.header_filter(conf, ctx)
   end
 
   if error_page then
-    -- Set shared headers for every error-page plugin instance
+    -- Set shared headers for every plugin instance
     local metadata = apisix_plugin.plugin_metadata(plugin_name)
     if metadata and metadata.value.response_headers then
       core.log.warn("metadata: ", core.json.delay_encode(metadata))
@@ -231,7 +237,7 @@ function _M.header_filter(conf, ctx)
       end
     end
 
-    -- Set specific headers for the single error-page plugin instance
+    -- Set specific headers for the single plugin instance
     if error_headers then
       for key, value in pairs(error_headers) do
         ngx.header[key] = value

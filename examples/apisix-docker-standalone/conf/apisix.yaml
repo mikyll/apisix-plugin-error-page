@@ -20,7 +20,7 @@ global_rules:
           - status_range:
               min: 400
               max: 450
-            page_content: |
+            response_content: |
               <html>
                 <head>
                   <title>$status</title>
@@ -42,7 +42,7 @@ global_rules:
           # Page from file for status codes >= 500
           - status_range:
               min: 500
-            page_filepath: "/usr/local/apisix/apisix/html/5xx.html"
+            response_filepath: "/usr/local/apisix/apisix/html/5xx.html"
 
           # NB: the following pages override previously defined 400-450 range
           #     (status_codes has priority over status_range)
@@ -50,12 +50,12 @@ global_rules:
               - 403
             response_headers:
               content_type: "application/json"
-            page_content: |
+            response_content: |
               {"error_msg": "403 Forbidden"}
 
           - status_codes:
               - 404
-            page_filepath: "/usr/local/apisix/apisix/html/404.html"
+            response_filepath: "/usr/local/apisix/apisix/html/404.html"
 
 
 routes:
