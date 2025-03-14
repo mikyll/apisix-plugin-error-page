@@ -4,8 +4,7 @@
 [![NGINX][nginx-shield]][nginx-url]
 [![Lua][lua-shield]][lua-url]
 [![Perl][perl-shield]][perl-url]
-[![YAML][yaml-shield]][yaml-url]\
-[![Build Status][build-status-shield]][build-status-url]
+[![YAML][yaml-shield]][yaml-url]
 
 # APISIX Error-page Custom Plugin
 
