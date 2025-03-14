@@ -123,7 +123,7 @@ local metadata_schema    = {
 
 
 local _M = {
-  version = 0.2,
+  version = 0.3,
   priority = 0,
   name = plugin_name,
   schema = schema,
@@ -230,8 +230,6 @@ function _M.header_filter(conf, ctx)
     -- Set shared headers for every plugin instance
     local metadata = apisix_plugin.plugin_metadata(plugin_name)
     if metadata and metadata.value.response_headers then
-      core.log.warn("metadata: ", core.json.delay_encode(metadata))
-      core.log.warn("type: ", type(metadata.value.response_headers))
       for key, value in pairs(metadata.value.response_headers) do
         ngx.header[key] = value
       end
