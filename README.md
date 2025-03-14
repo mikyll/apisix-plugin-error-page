@@ -8,7 +8,7 @@
 
 # APISIX Error-page Custom Plugin
 
-This plugin allows APISIX to send a custom response based on status codes received by backend or APISIX itself. For example, it can be used to override default APISIX responses.
+This plugin allows APISIX to send a custom response based on status codes received by backend or APISIX itself. For example, it can be used to **override default APISIX responses**, such as:
 
 </div>
 
