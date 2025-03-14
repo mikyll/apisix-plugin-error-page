@@ -39,6 +39,12 @@ This plugin allows APISIX to send a custom response based on status codes receiv
   - [Plugin Usage](#plugin-usage)
     - [Installation](#installation)
     - [Configuration](#configuration)
+      - [Attributes](#attributes)
+      - [Metadata](#metadata)
+    - [Enable Plugin](#enable-plugin)
+      - [Traditional](#traditional)
+      - [Standalone](#standalone)
+    - [Example Usage](#example-usage)
   - [Testing](#testing)
     - [CI](#ci)
   - [Examples](#examples)
@@ -60,7 +66,96 @@ The [example below](#examples) shows how to setup the plugin in a Standalone dep
 
 ### Configuration
 
-TODO: Describe how to use the plugin (metadata, configuration, ecc. table-like for APISIX docs)
+You can configure this plugin for [Routes](https://apisix.apache.org/docs/apisix/terminology/route/) or [Global Rules](https://apisix.apache.org/docs/apisix/terminology/global-rule/).
+
+#### Attributes
+
+| Name | Type | Required | Default | Valid values | Description |
+| ---- | ---- | -------- | ------- | ------------ | ----------- |
+| pages | array[object] | True |  |  | List of custom pages |
+| pages.status_codes | array[integer] | False |  | [200, 599] | List of status codes for a specific page. Status codes in this list take precedence over the ones in status_range |
+| pages.status_range | array[object] | False |  |  | Range (inclusive) of status codes for a specific page |
+| pages.status_range.min | array[object] | False | 200 | [200, 598] | Minimum status code for the page |
+| pages.status_range.max | array[object] | False | 599 | [201, 599] | Maximum status code for the page |
+| pages.response_content | string | False |  |  | Content of the page that APISIX will return for the status codes. Value supports [NGiNX variables](https://nginx.org/en/docs/http/ngx_http_core_module.html#variables) |
+| pages.response_filepath | string | False |  |  | File path of the page that APISIX will return for the status codes. Value supports [NGiNX variables](https://nginx.org/en/docs/http/ngx_http_core_module.html#variables) |
+| pages.response_headers | object | False |  |  | Dictionary of headers to be included in APISIX response, for a specific plugin instance. Example: `Content-Type: text/html` |
+
+#### Metadata
+
+| Name | Type | Required | Default | Valid values | Description |
+| ---- | ---- | -------- | ------- | ------------ | ----------- |
+| response_headers | object | False |  | Valid values | Dictionary of headers to be included in APISIX response, for all plugin instances. Example: `Content-Type: text/html` |
+
+> [!IMPORTANT]
+> Plugin metadata set global values, shared accross all plugin instances. For example, if we have 2 different routes with `error-page` plugin enabled, `plugin_metadata` values will be the same for both of them.
+
+[Back to TOC](#table-of-contents)
+
+### Enable Plugin
+
+The examples below enable `error-page` plugin globally. With these configurations, APISIX will return a custom error message for status codes between `400` and `450`.
+
+#### Traditional
+
+```bash
+curl http://127.0.0.1:9180/apisix/admin/global_rules/1  -H "X-API-KEY: $admin_key" -X PUT -d '
+{
+  "plugins": {
+    "error-page": {
+      "pages": [
+        {
+          "status_range": {
+            "min": 400,
+            "max": 450
+          },
+          "response_headers": {
+            "Content-Type": "application/json"
+          },
+          "response_content": "{\"error_msg\": \"$status Server Error\"}"
+        }
+      ]
+    }
+  }
+}'
+```
+
+#### Standalone
+
+```yaml
+global_rules:
+  - id: error_page
+    plugins:
+      error-page:
+        pages:
+          - status_range:
+              min: 400
+              max: 450
+            response_headers:
+              content_type: "application/json"
+            response_content: |
+              {"error_msg": "$status Server Error"}
+```
+
+### Example Usage
+
+Once you have enabled the Plugin as shown above, you can make a request:
+
+```bash
+curl -X GET "http://127.0.0.1:9080/test/index.html"
+```
+
+The response will be as shown below:
+
+```json
+{"error_msg": "404 Server Error"}
+```
+
+Instead of the default `404` error message:
+
+```json
+{"error_msg":"404 Route Not Found"}
+```
 
 [Back to TOC](#table-of-contents)
 
@@ -84,6 +179,8 @@ For more example ideas, have a look at [github.com/mikyll/apisix-examples](https
 
 #### Setup
 
+See [`apisix.yaml`](examples/apisix-docker-standalone/conf/apisix.yaml).
+
 Run the following command to setup the example:
 
 ```bash
@@ -94,18 +191,18 @@ docker compose -f examples/apisix-docker-standalone/compose.yaml up
 
 Visit the following URLs:
 
-- HTML **page content**, with [*NGiNX variables*](https://nginx.org/en/docs/http/ngx_http_core_module.html#variables) substitution, for backend errors (400 - 450):
+- HTML **page content**, with [*NGiNX variables*](https://nginx.org/en/docs/http/ngx_http_core_module.html#variables) substitution, for backend errors (`400` - `450`):
   - [`localhost:9080/status/400`](http://localhost:9080/status/400)
   - [`localhost:9080/status/402`](http://localhost:9080/status/402)
   
-- HTML page loaded **from file**, for backend errors (5xx):
+- HTML page loaded **from file**, for backend errors (`5xx`):
   - [`localhost:9080/status/500`](http://localhost:9080/status/500)
   - [`localhost:9080/status/505`](http://localhost:9080/status/505)
   - [`localhost:9080/status/506`](http://localhost:9080/status/506)
 
-- Simple **JSON** response for specific backend error (403): [`localhost:9080/status/403`](http://localhost:9080/status/403)
+- Simple **JSON** response for specific backend error (`403`): [`localhost:9080/status/403`](http://localhost:9080/status/403)
 
-- HTML page with **CSS** for APISIX error route not found (404): [`localhost:9080/unknown_route`](http://localhost:9080/unknown_route)
+- HTML page with **CSS** for APISIX error route not found (`404`): [`localhost:9080/unknown_route`](http://localhost:9080/unknown_route)
 
 [Back to TOC](#table-of-contents)
 
