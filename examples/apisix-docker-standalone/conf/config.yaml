@@ -95,7 +95,6 @@ plugins:                           # plugin list (sorted by priority)
   #- log-rotate                    # priority: 100
 
   # <- recommend to use priority (0, 100) for your custom plugins
-  - demo
 
   #- gm                            # priority: -43
   #- ocsp-stapling                 # priority: -44

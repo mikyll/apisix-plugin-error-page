@@ -7,54 +7,45 @@
 [![YAML][yaml-shield]][yaml-url]\
 [![Build Status][build-status-shield]][build-status-url]
 
-# APISIX Plugin Template
+# APISIX Error-page Custom Plugin
 
-This template can be used to create custom Lua plugins for [Apache APISIX](https://github.com/apache/apisix).<br>
-Extended from [api7/apisix-plugin-template](https://github.com/api7/apisix-plugin-template).
+This plugin allows APISIX to send a custom response based on status codes received by backend or APISIX itself. For example, it can be used to override default APISIX responses.
 
 </div>
 
+- Route not found error (status code `404`):
+    
+    ```json
+    {"error_msg":"404 Route Not Found"}
+    ```
+
+- Generic gateway errors (status code `5xx`), such as:
+
+    ```html
+    <html>
+    <head><title>504 Gateway Time-out</title>
+    </head>
+    <body>
+    <center><h1>504 Gateway Time-out</h1></center>
+    <hr><center>openresty</center>
+    <p><em>Powered by <a href="https://apisix.apache.org/">APISIX</a>.</em></p></body>
+    </html>
+    ```
+
 ## Table of Contents
 
-- [APISIX Plugin Template](#apisix-plugin-template)
+- [APISIX Error-page Custom Plugin](#apisix-error-page-custom-plugin)
   - [Table of Contents](#table-of-contents)
-  - [Template Usage](#template-usage)
-  - [Plugin Template Structure](#plugin-template-structure)
   - [Plugin Usage](#plugin-usage)
     - [Installation](#installation)
+    - [Configuration](#configuration)
   - [Testing](#testing)
-    - [Local Docker](#local-docker)
     - [CI](#ci)
   - [Examples](#examples)
+    - [Standalone Example](#standalone-example)
+      - [Setup](#setup)
+      - [Test Routes](#test-routes)
   - [Learn More](#learn-more)
-
-## Template Usage
-
-You can use this template by clicking the "[Use this template](https://github.com/api7/apisix-plugin-template/generate)" button on the top.
-
-You can then clone the newly generated repository to your local machine and write your custom code.
-
-[Back to TOC](#table-of-contents)
-
-## Plugin Template Structure
-
-The template contains the following files:
-
-```lang-none
-.
-├── .github/         GitHub Actions workflows and Dependabot configuration files
-├── apisix           All files in this folder will be copied and will overwrite the original APISIX files
-│   └── plugins/     Your custom plugin goes here
-├── ci               All files in this folder will be copied and will overwrite the original APISIX
-│   └── utils/       CI utils script folder
-├── examples/        APISIX examples
-├── t/               Test cases
-├── LICENSE
-├── Makefile
-└── README.md
-```
-
-[Back to TOC](#table-of-contents)
 
 ## Plugin Usage
 
@@ -65,24 +56,19 @@ To install custom plugins in APISIX there are 2 methods:
 - placing them alongside other built-in plugins, in `${APISIX_INSTALL_DIRECTORY}/apisix/plugins/` (by default `/usr/local/apisix/apisix/plugins/`);
 - placing them in a custom directory and setting `apisix.extra_lua_path` to point that directory, in `config.yaml`.
 
+The [example below](#examples) shows how to setup the plugin in a Standalone deployment, using the second method (`extra_lua_path`).
+
+### Configuration
+
+TODO: Describe how to use the plugin (metadata, configuration, ecc.)
+
 [Back to TOC](#table-of-contents)
 
 ## Testing
 
-To test your custom plugin, you can:
-
-- enable it on a route or a global rule and try sending a request;
-- [write tests](https://apisix.apache.org/docs/apisix/internal/testing-framework) for it and run these tests in a Docker container locally or in the CI.
-
-### Local Docker
+### CI
 
 TODO
-
-<!--
-This repository contains a [Docker image](examples/apisix-docker-custom/Dockerfile) which builds APISIX from source and installs the NGiNX testing framework. This can be used to run tests locally.
--->
-
-### CI
 
 The [`ci.yml`](.github/workflows/ci.yml) workflow runs the tests cases in the [`t/`](t/) folder and can be triggered by a **workflow_dispatch** event, from GitHub: [Actions | CI](https://github.com/mikyll/apisix-plugin-template/actions/workflows/ci.yml).
 
@@ -90,9 +76,23 @@ The [`ci.yml`](.github/workflows/ci.yml) workflow runs the tests cases in the [`
 
 ## Examples
 
-Folder [`examples/`](examples/) contains a simple example that shows how to setup APISIX locally on Docker, and load the plugin(s).
+Folder [`examples/`](examples/) contains a simple example that shows how to setup APISIX locally on Docker, and load `error-page` plugin.
 
-For more examples, have a look at [github.com/mikyll/apisix-examples](https://github.com/mikyll/apisix-examples).
+For more example ideas, have a look at [github.com/mikyll/apisix-examples](https://github.com/mikyll/apisix-examples).
+
+### Standalone Example
+
+#### Setup
+
+Run the following command to setup the example:
+
+```bash
+docker compose -f examples/apisix-docker-standalone/compose.yaml up
+```
+
+#### Test Routes
+
+TODO
 
 [Back to TOC](#table-of-contents)
 
@@ -118,5 +118,5 @@ For more examples, have a look at [github.com/mikyll/apisix-examples](https://gi
 [perl-url]: https://www.perl.org/
 [yaml-shield]: https://img.shields.io/badge/YAML-%23ffffff.svg?logo=yaml&logoColor=151515
 [yaml-url]: https://yaml.org/
-[build-status-shield]: https://github.com/mikyll/apisix-plugin-template/actions/workflows/ci.yml/badge.svg
-[build-status-url]: https://github.com/mikyll/apisix-plugin-template/actions
+[build-status-shield]: https://github.com/mikyll/apisix-error-page/actions/workflows/ci.yml/badge.svg
+[build-status-url]: https://github.com/mikyll/apisix-plugin-error-page/actions

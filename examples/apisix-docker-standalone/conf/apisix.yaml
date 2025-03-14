@@ -11,19 +11,4 @@ routes:
     uri: /get
     upstream_id: internal_httpbin
 
-  # Route with demo plugin
-  - id: demo
-    uri: /demo
-    upstream_id: internal_httpbin
-    plugins:
-      demo:
-        body: "Hello from demo plugin!"
-
-  # Public API from demo plugin
-  - id: demo_public_api
-    uri: /apisix/plugin/demo/public_api
-    upstream_id: internal_httpbin
-    plugins:
-      public-api: {}
-      
 #END

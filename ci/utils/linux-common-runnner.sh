@@ -2,8 +2,14 @@
 
 set -exuo pipefail
 
-VAR_CUR_PATH="$(cd $(dirname ${0}); pwd)"
-VAR_CUR_HOME="$(cd $(dirname ${0})/../..; pwd)"
+VAR_CUR_PATH="$(
+    cd $(dirname ${0})
+    pwd
+)"
+VAR_CUR_HOME="$(
+    cd $(dirname ${0})/../..
+    pwd
+)"
 
 source "${VAR_CUR_PATH}/linux-common.sh"
 
@@ -15,7 +21,6 @@ export_or_prefix() {
     export PATH=$OPENRESTY_PREFIX/nginx/sbin:$OPENRESTY_PREFIX/luajit/bin:$OPENRESTY_PREFIX/bin:$PATH
 }
 
-
 get_apisix_code() {
     # ${1} branch name
     # ${2} checkout path
@@ -25,16 +30,14 @@ get_apisix_code() {
         -b "${git_branch}" "${git_checkout_path}" && cd "${git_checkout_path}" || exit 1
 }
 
-
-patch_apisix_code(){
+patch_apisix_code() {
     # ${1} apisix home dir
     VAR_APISIX_HOME="${VAR_CUR_HOME}/${1:-workbench}"
 
     sed -ri -e "/make\s+ci-env-up/d" \
-      -e "/linux-ci-init-service.sh/d" \
-      "${VAR_APISIX_HOME}/ci/linux_openresty_common_runner.sh"
+        -e "/linux-ci-init-service.sh/d" \
+        "${VAR_APISIX_HOME}/ci/linux_openresty_common_runner.sh"
 }
-
 
 install_module() {
     # ${1} apisix home dir
@@ -50,7 +53,6 @@ install_module() {
     cp -av "${VAR_CUR_HOME}/t" "${VAR_APISIX_HOME}"
 }
 
-
 run_case() {
     export_or_prefix
 
@@ -58,7 +60,7 @@ run_case() {
     ./bin/apisix init_etcd
 
     git submodule update --init --recursive
-    FLUSH_ETCD=1 prove -I../test-nginx/lib -I./ -r -s t/demo
+    FLUSH_ETCD=1 prove -I../test-nginx/lib -I./ -r -s t/
 }
 
 # =======================================
