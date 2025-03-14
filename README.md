@@ -60,7 +60,7 @@ The [example below](#examples) shows how to setup the plugin in a Standalone dep
 
 ### Configuration
 
-TODO: Describe how to use the plugin (metadata, configuration, ecc.)
+TODO: Describe how to use the plugin (metadata, configuration, ecc. table-like for APISIX docs)
 
 [Back to TOC](#table-of-contents)
 
@@ -92,7 +92,20 @@ docker compose -f examples/apisix-docker-standalone/compose.yaml up
 
 #### Test Routes
 
-TODO
+Visit the following URLs:
+
+- HTML **page content**, with [*NGiNX variables*](https://nginx.org/en/docs/http/ngx_http_core_module.html#variables) substitution, for backend errors (400 - 450):
+  - [`localhost:9080/status/400`](http://localhost:9080/status/400)
+  - [`localhost:9080/status/402`](http://localhost:9080/status/402)
+  
+- HTML page loaded **from file**, for backend errors (5xx):
+  - [`localhost:9080/status/500`](http://localhost:9080/status/500)
+  - [`localhost:9080/status/505`](http://localhost:9080/status/505)
+  - [`localhost:9080/status/506`](http://localhost:9080/status/506)
+
+- Simple **JSON** response for specific backend error (403): [`localhost:9080/status/403`](http://localhost:9080/status/403)
+
+- HTML page with **CSS** for APISIX error route not found (404): [`localhost:9080/unknown_route`](http://localhost:9080/unknown_route)
 
 [Back to TOC](#table-of-contents)
 

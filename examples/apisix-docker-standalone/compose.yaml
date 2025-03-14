@@ -11,6 +11,7 @@ services:
       - ./conf/config.yaml:/usr/local/apisix/conf/config.yaml
       - ./conf/apisix.yaml:/usr/local/apisix/conf/apisix.yaml
       - ../../apisix/plugins:/usr/local/apisix/apisix/plugins/custom/apisix/plugins
+      - ./html:/usr/local/apisix/apisix/html
     ports:
       - "9080:9080/tcp"
       - "9443:9443/tcp"
