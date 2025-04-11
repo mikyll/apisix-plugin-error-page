@@ -1,0 +1,31 @@
+services:
+  apisix:
+    container_name: apisix-standalone
+    image: apache/apisix:latest
+    restart: no
+    stdin_open: true
+    tty: true
+    environment:
+      - APISIX_STAND_ALONE=true
+    volumes:
+      - ./conf/config.yaml:/usr/local/apisix/conf/config.yaml
+      - ./conf/apisix.yaml:/usr/local/apisix/conf/apisix.yaml
+      - ../../apisix/plugins:/usr/local/apisix/apisix/plugins/custom/apisix/plugins
+    ports:
+      - "9080:9080/tcp"
+      - "9443:9443/tcp"
+    networks:
+      apisix:
+
+  httpbin:
+    container_name: httpbin-standalone
+    image: kennethreitz/httpbin:latest
+    restart: no
+    ports:
+      - "3000:80/tcp"
+    networks:
+      apisix:
+
+networks:
+  apisix:
+    driver: bridge
