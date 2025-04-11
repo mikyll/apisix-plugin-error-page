@@ -5,8 +5,6 @@ services:
     restart: no
     stdin_open: true
     tty: true
-    environment:
-      - APISIX_STAND_ALONE=true
     volumes:
       - ./conf/config.yaml:/usr/local/apisix/conf/config.yaml
       - ./conf/apisix.yaml:/usr/local/apisix/conf/apisix.yaml

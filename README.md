@@ -7,54 +7,35 @@
 [![YAML][yaml-shield]][yaml-url]\
 [![Build Status][build-status-shield]][build-status-url]
 
-# APISIX Plugin Template
+# APISIX Plugin error-page
 
-This template can be used to create custom Lua plugins for [Apache APISIX](https://github.com/apache/apisix).<br>
-Extended from [api7/apisix-plugin-template](https://github.com/api7/apisix-plugin-template).
+This custom plugin allows APISIX to return a custom error page for status codes `404`, `500`, `502` and `503`.
+
+For example, it allows to replace the default response for 404:
+
+```json
+{"error_msg":"404 Route Not Found"}
+```
 
 </div>
 
 ## Table of Contents
 
-- [APISIX Plugin Template](#apisix-plugin-template)
+- [APISIX Plugin error-page](#apisix-plugin-error-page)
   - [Table of Contents](#table-of-contents)
-  - [Template Usage](#template-usage)
-  - [Plugin Template Structure](#plugin-template-structure)
   - [Plugin Usage](#plugin-usage)
     - [Installation](#installation)
-  - [Testing](#testing)
-    - [Local Docker](#local-docker)
-    - [CI](#ci)
+    - [Configuration](#configuration)
+      - [Plugin Metadata](#plugin-metadata)
+    - [Enable Plugin](#enable-plugin)
+      - [Traditional](#traditional)
+      - [Standalone](#standalone)
+    - [Example Usage](#example-usage)
   - [Examples](#examples)
+    - [Standalone Example](#standalone-example)
+      - [Setup](#setup)
+      - [Test Routes](#test-routes)
   - [Learn More](#learn-more)
-
-## Template Usage
-
-You can use this template by clicking the "[Use this template](https://github.com/api7/apisix-plugin-template/generate)" button on the top.
-
-You can then clone the newly generated repository to your local machine and write your custom code.
-
-[Back to TOC](#table-of-contents)
-
-## Plugin Template Structure
-
-The template contains the following files:
-
-```lang-none
-.
-├── .github/         GitHub Actions workflows and Dependabot configuration files
-├── apisix           All files in this folder will be copied and will overwrite the original APISIX files
-│   └── plugins/     Your custom plugin goes here
-├── ci               All files in this folder will be copied and will overwrite the original APISIX
-│   └── utils/       CI utils script folder
-├── examples/        APISIX examples
-├── t/               Test cases
-├── LICENSE
-├── Makefile
-└── README.md
-```
-
-[Back to TOC](#table-of-contents)
 
 ## Plugin Usage
 
@@ -67,32 +48,169 @@ To install custom plugins in APISIX there are 2 methods:
 
 [Back to TOC](#table-of-contents)
 
-## Testing
+### Configuration
 
-To test your custom plugin, you can:
+This plugin can be configured for [Routes](https://apisix.apache.org/docs/apisix/terminology/route/) or [Global Rules](https://apisix.apache.org/docs/apisix/terminology/global-rule/).
 
-- enable it on a route or a global rule and try sending a request;
-- [write tests](https://apisix.apache.org/docs/apisix/internal/testing-framework) for it and run these tests in a Docker container locally or in the CI.
+#### Plugin Metadata
 
-### Local Docker
+| Name                   | Type    | Required | Default                                                                                                                                                       | Valid values | Description                                                |
+| ---------------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------------------------------------- |
+| enable                 | boolean | False    | `false`                                                                                                                                                       |              | If true, enable the plugin.                                |
+| error_404              | object  | False    |                                                                                                                                                               |              | Error page to return when APISIX returns 404 status codes. |
+| error_404.body         | string  | False    | `<html> <head><title>404 Not Found</title></head> <body> <center><h1>404 Not Found</h1></center> <hr><center>APISIX</center> </html>`                         |              | Response body.                                             |
+| error_404.content-type | string  | False    | `text/html`                                                                                                                                                   |              | Response content type.                                     |
+| error_500              | object  | False    |                                                                                                                                                               |              | Error page to return when APISIX returns 500 status codes. |
+| error_500.body         | string  | False    | `<html> <head><title>500 Internal Server Error</title></head> <body> <center><h1>500 Internal Server Error</h1></center> <hr><center>APISIX</center> </html>` |              | Response body.                                             |
+| error_500.content-type | string  | False    | `text/html`                                                                                                                                                   |              | Response content type.                                     |
+| error_502              | object  | False    |                                                                                                                                                               |              | Error page to return when APISIX returns 502 status codes. |
+| error_502.body         | string  | False    | `<html> <head><title>502 Bad Gateway</title></head> <body> <center><h1>502 Bad Gateway</h1></center> <hr><center>APISIX</center> </html>`                     |              | Response body.                                             |
+| error_502.content-type | string  | False    | `text/html`                                                                                                                                                   |              | Response content type.                                     |
+| error_503              | object  | False    |                                                                                                                                                               |              | Error page to return when APISIX returns 503 status codes. |
+| error_503.body         | string  | False    | `<html> <head><title>503 Service Unavailable</title></head> <body> <center><h1>503 Service Unavailable</h1></center> <hr><center>APISIX</center> </html>`     |              | Response body.                                             |
+| error_503.content-type | string  | False    | `text/html`                                                                                                                                                   |              | Response content type.                                     |
 
-TODO
+> [!IMPORTANT]
+> Plugin metadata set global values, shared accross all plugin instances. For example, if we have 2 different routes with `error-page` plugin enabled, `plugin_metadata` values will be the same for both of them.
 
-<!--
-This repository contains a [Docker image](examples/apisix-docker-custom/Dockerfile) which builds APISIX from source and installs the NGiNX testing framework. This can be used to run tests locally.
--->
+### Enable Plugin
 
-### CI
+The examples below enable `error-page` plugin globally. With these configurations, APISIX will return a custom error message for status codes `404` and `500`, on every route (even on undefined ones).
 
-The [`ci.yml`](.github/workflows/ci.yml) workflow runs the tests cases in the [`t/`](t/) folder and can be triggered by a **workflow_dispatch** event, from GitHub: [Actions | CI](https://github.com/mikyll/apisix-plugin-template/actions/workflows/ci.yml).
+#### Traditional
+
+Configure the plugin metadata:
+
+```bash
+curl http://127.0.0.1:9180/apisix/admin/plugin_metadata/error-page  -H "X-API-KEY: $admin_key" -X PUT -d '
+{
+  "enable": true,
+  "error_404": {
+    "body": "{\"status_code\":404,\"error\":\"Not Found\"}",
+    "content-type": "application/json"
+  },
+  "error_500": {
+    "body": "{\"status_code\":500,\"error\":\"API Gateway Error\"}",
+    "content-type": "application/json"
+  },
+}'
+```
+
+Enable the plugin globally, using global rules:
+
+```bash
+curl http://127.0.0.1:9180/apisix/admin/global_rules/error-page  -H "X-API-KEY: $admin_key" -X PUT -d '
+{
+  "plugins": {
+    "error-page": {}
+  }
+}'
+```
+
+#### Standalone
+
+Configure the plugin metadata:
+
+```yaml
+plugin_metadata:
+  - id: error-page
+    enable: true
+    error_404:
+      body: |
+        {
+          "status_code": 404,
+          "error": "Not Found"
+        }
+      content-type: "application/json"
+    error_500:
+      body: |
+        {
+          "status_code": 500,
+          "error": "API Gateway Error"
+        }
+      content-type: "application/json"
+```
+
+Enable the plugin globally, using global rules:
+
+```yaml
+global_rules:
+  - id: generic_error_page
+    plugins:
+      error-page: {}
+```
+
+### Example Usage
+
+Send some request to test error pages:
+
+- Route not defined (overrides default error page for 404):
+
+  ```bash
+  curl -i "localhost:9080/unknown"
+  ```
+
+  Response:
+
+  ```bash
+  HTTP/1.1 404 Not Found
+  Content-Type: application/json
+  Connection: keep-alive
+  Server: APISIX/3.12.0
+  Content-Length: 49
+
+  {
+    "status_code": 404,
+    "error": "Not Found"
+  }
+  ```
+
+- Status code 500 returned from APISIX:
+  
+  ```bash
+  curl -i "localhost:9080/apisix_status/500"
+  ```
+
+  Response:
+
+  ```bash
+  HTTP/1.1 500 Internal Server Error
+  Content-Type: application/json
+  Connection: close
+  Server: APISIX/3.12.0
+  Content-Length: 57
+
+  {
+    "status_code": 500,
+    "error": "API Gateway Error"
+  }
+  ```
 
 [Back to TOC](#table-of-contents)
 
 ## Examples
 
-Folder [`examples/`](examples/) contains a simple example that shows how to setup APISIX locally on Docker, and load the plugin(s).
+Folder [`examples/`](examples/) contains a simple example that shows how to setup APISIX locally on Docker, and load `error-page` plugin.
 
-For more examples, have a look at [github.com/mikyll/apisix-examples](https://github.com/mikyll/apisix-examples).
+For more example ideas, have a look at [github.com/mikyll/apisix-examples](https://github.com/mikyll/apisix-examples).
+
+[Back to TOC](#table-of-contents)
+
+### Standalone Example
+
+#### Setup
+
+See [`apisix.yaml`](examples/apisix-docker-standalone/conf/apisix.yaml).
+
+Run the following command to setup the example:
+
+```bash
+docker compose -f examples/apisix-docker-standalone/compose.yaml up
+```
+
+#### Test Routes
+
+Run [`test_routes.sh`](examples/utils/test_routes.sh) to send testing requests.
 
 [Back to TOC](#table-of-contents)
 

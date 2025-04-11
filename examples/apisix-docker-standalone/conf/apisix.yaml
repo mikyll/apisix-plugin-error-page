@@ -1,29 +1,64 @@
 upstreams:
-  # Upstream to internal service
-  - id: internal_httpbin
+  - id: httpbin_internal
     nodes:
       "httpbin-standalone:80": 1
     type: roundrobin
 
+global_rules:
+  - id: generic_error_page
+    plugins:
+      error-page: {}
+
 routes:
-  # Simple route to internal service
   - id: base_internal
-    uri: /get
-    upstream_id: internal_httpbin
+    uri: /anything
+    upstream_id: httpbin_internal
 
-  # Route with demo plugin
-  - id: demo
-    uri: /demo
-    upstream_id: internal_httpbin
+  - id: apisix_status
+    uri: /apisix_status/*
+    upstream_id: httpbin_internal
     plugins:
-      demo:
-        body: "Hello from demo plugin!"
+      serverless-post-function:
+        phase: access
+        functions:
+          - |
+            return function(conf, ctx)
+              local core = require("apisix.core")
+              local status_code = 200
 
-  # Public API from demo plugin
-  - id: demo_public_api
-    uri: /apisix/plugin/demo/public_api
-    upstream_id: internal_httpbin
+              local matched = ngx.re.match(ngx.var.uri, "^/apisix_status/([2-5][0-9]{2})$")
+              if matched then
+                status_code = tonumber(matched[1])
+              end
+
+              core.response.exit(status_code)
+            end
+
+  - id: upstream_status
+    uri: /upstream_status/*
+    upstream_id: httpbin_internal
     plugins:
-      public-api: {}
-      
+      proxy-rewrite:
+        regex_uri:
+          - ^/upstream_status/(.*)
+          - /status/$1
+
+plugin_metadata:
+  - id: error-page
+    enable: true
+    error_404:
+      body: |
+        {
+          "status_code": 404,
+          "error": "Not Found"
+        }
+      content-type: "application/json"
+    error_500:
+      body: |
+        {
+          "status_code": 500,
+          "error": "API Gateway Error"
+        }
+      content-type: "application/json"
+
 #END
